@@ -1,53 +1,74 @@
 (ql:quickload "str")
 
-(defun convert_to_binary (num common?) 
-  (if common? 
-      (if (> num 0) 1 0)
-      (if (< num 0) 1 0)))
+(defun get-lines (input) 
+  (str:lines (str:from-file input)))
 
-(defun convert_to_dec (num)
+(defun convert-to-binary (num common?) 
+  (if common? 
+      (if (>= num 0) 1 0)
+      (if (<= num 0) 1 0)))
+
+(defun convert-to-dec (num)
   (reduce (lambda (accume val) 
             (+ (* 2 accume) val)) num
   :initial-value 0))
 
-(defun convert_gamma (num)
-  (mapcar #'(lambda (value) (convert_to_binary value T)) num))
-
-(defun convert_epsilon (num)
-  (mapcar #'(lambda (value) (convert_to_binary value nil)) num))
-(convert_gamma `(1 -1 2 1))
-
-(defun make_empty_list (size)
+(defun make-empty-list (size)
   (loop for x from 1 to size
         collect 0))
 
-(defun get_lines (input)
-  (str:lines (str:from-file input)))
+(defun convert-gamma (num)
+  (mapcar #'(lambda (value) (convert-to-binary value T)) num))
 
-(defun get_commons (lines)
-  (let* ((bin_size (length (nth 0 lines)))
-         (col (make_empty_list bin_size)))
+(defun convert-epsilon (num)
+  (mapcar #'(lambda (value) (convert-to-binary value nil)) num))
+
+(defun get-commons (lines)
+  (let* ((bin-size (length (nth 0 lines)))
+         (col (make-empty-list bin-size)))
     (loop for bin in lines
           if bin do 
-          (loop for i across bin
-                for x from 0 to bin_size
+          (loop for i in bin
+                for x from 0 to bin-size
                 do (let ((curval (nth x col)))
-                     (setf (nth x col) (if (char= i #\1) (+ curval 1) (- curval 1))
+                     (setf (nth x col) (if (= i 1) (+ curval 1) (- curval 1))
                            ))))
-    (cons (convert_epsilon col) 
-          (cons (convert_gamma col) nil))))
+    (print col)
+    (cons (convert-epsilon col) 
+          (cons (convert-gamma col) nil))))
 
+(defun convert-to-list (string-binary)
+  (map 'list #'(lambda (c) (digit-char-p c)) string-binary))
 
-(defun star_one (input)
-  (reduce #'* (mapcar #'convert_to_dec (get_commons (get_lines input)))))
+(defun star-one (input)
+  (reduce #'* (mapcar
+      #'convert-to-dec 
+      (get-commons (mapcar #'convert-to-list (get-lines input))))))
 
-(star_one "./data.lisp")
+(defun partition (fun lst)
+  (loop for item in lst
+        if (funcall fun item) collect item into right
+        else collect item into left
+        finally (return (list right left))))
 
-(defun star_two (input)
-  (let* ((lines (get_lines input))
-         (epsi (get_lines input))
-         (commons (get_commons lines))
-         (epsi (nth 0 commons))
-         (gamma (nth 1 commons)))
-  (loop while (> (length lines) 1)
-        do ())))
+(defun partition-most-common (lst comparer &optional (index 0))
+  (let* ((part (partition #'(lambda (v) (= (nth index v) 0)) lst))
+         (right (first part))
+         (left (car (last part)))
+         (common (if (funcall comparer (length left) (length right)) left right)))
+    (if (<= (length common) 2) common
+        (partition-most-common common comparer (+ 1 index)))))
+
+(defun star-two (input)
+  (let* ((lines (mapcar #'convert-to-list (get-lines input)))
+         (most-common (reduce #'max 
+                              (mapcar #'convert-to-dec 
+                                      (partition-most-common lines #'>))))
+         (least-common (reduce #'min 
+                               (mapcar #'convert-to-dec 
+                                       (partition-most-common lines #'<)))))
+    (* most-common least-common)))
+    
+
+(star-one "./data.lisp")
+(star-two "data.lisp")
