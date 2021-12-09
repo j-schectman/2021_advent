@@ -21,15 +21,21 @@
 
 (defun list-simulate (fish-list generations)
   (if (> generations 1) 
-  (let ((next-list (make-array 9)))
-   (loop for fish across fish-list
-        for i from 0 to 8
-        if (= i 0) do (setf (aref next-list 8) fish)
-        and do (setf (aref next-list 6) fish)
-        else do (setf 
-                  (aref next-list (- i 1)) 
-                  (+ (aref next-list (- i 1)) fish)))
-      (list-simulate next-list (- generations 1)))
+      (let ((next-list (make-array 9)))
+        (labels 
+            ((update-fish-count (index fish-count)
+               (setf (aref next-list index) (+ fish-count (aref next-list index))))
+             (add-to-next-list (index fish-count)
+               (if (= index 0) 
+                   (progn
+                     (update-fish-count 8 fish-count)
+                     (update-fish-count 6 fish-count))
+                   ; else
+                   (update-fish-count (- index 1) fish-count))))
+          (loop for fish across fish-list
+                for i from 0 to 8
+                do (add-to-next-list i fish))
+          (list-simulate next-list (- generations 1))))
       fish-list))
 
 (defun simulate-fish (fishes generations)
